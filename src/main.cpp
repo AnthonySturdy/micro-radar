@@ -44,8 +44,11 @@ void setup()
 
   // begin background server for configuration
   configServer.Initialise();
+}
 
-  // test opensky request
+void loop()
+{
+  // auth
   String token = authHandler.GetValidToken(
     configServer.GetStoredString("opensky-id"),
     configServer.GetStoredString("opensky-secret")
@@ -56,44 +59,36 @@ void setup()
     Serial.println("Token available - adding auth header");
     headers.push_back({ "Authorization", "Bearer " + token });
   }
+
+  // request
+  double lat = 51.454863,
+    lon = -0.320663,
+    rad = 0.2;
   String airplaneStateResponse = http.Get(
     "https://opensky-network.org/api/states/all",
     {
-      {"lomin", String(-0.320663 - 0.3)},
-      {"lomax", String(-0.320663 + 0.3)},
-      {"lamin", String(51.454863 - 0.3)},
-      {"lamax", String(51.454863 + 0.3)}
+      {"lamin", String(lat - rad)},
+      {"lamax", String(lat + rad)},
+      {"lomin", String(lon - rad)},
+      {"lomax", String(lon + rad)}
     },
     headers
   );
-  Serial.println(airplaneStateResponse);
 
+  // present
   JsonDocument doc;
   deserializeJson(doc, airplaneStateResponse);
   auto aircraft = JsonParser::ParseArray<Aircraft>(doc["states"]);
 
-  for (auto& ac : aircraft) {
-    Serial.println(ac.callsign + " from " + ac.originCountry + (ac.onGround ? " (Grounded)" : ""));
-  }
-}
-
-void loop()
-{
-  // TEMP: draw example graphics
   backbuffer.fillScreen(lgfx::color888(0, 0, 0)); // clear buffer
 
-  backbuffer.fillCircle(120, 120, 110, lgfx::color888(0, 255, 0));
-  backbuffer.fillCircle(120, 120, 60, lgfx::color888(255, 0, 0));
-  backbuffer.fillCircle(120, 120, 30, lgfx::color888(0, 0, 255));
+  for (auto& ac : aircraft) {
+    float normLat = (ac.latitude - (lat - rad)) / (2.0 * rad);
+    float normLon = (ac.longitude - (lon - rad)) / (2.0 * rad);
+    backbuffer.drawPixel(normLon * SCREEN_SIZE, normLat * SCREEN_SIZE, (ac.onGround ? lgfx::color888(255, 0, 0) : lgfx::color888(0, 255, 0)));
+  }
 
-  backbuffer.setTextColor(lgfx::color888(255, 255, 255));
-  float freq = millis() / 1000.0f,
-    mag = 40.0f;
-  backbuffer.drawCentreString(
-    "Hello, world!",
-    SCREEN_SIZE / 2 + (std::sin(freq) * mag),
-    SCREEN_SIZE / 2 + (std::cos(freq) * mag)
-  );
+  backbuffer.pushSprite(0, 0);
 
-  backbuffer.pushSprite(0, 0); // present
+  delay(21000);
 }

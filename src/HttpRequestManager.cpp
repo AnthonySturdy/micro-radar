@@ -38,8 +38,6 @@ String HttpRequestManager::Get(String url, std::vector<std::pair<String, String>
     String response = "";
 
     if (responseCode > 0) {
-        Serial.print("Response code: ");
-        Serial.println(responseCode);
         response = http.getString();
     }
     else {
@@ -65,8 +63,6 @@ String HttpRequestManager::Post(String url, String body, std::vector<std::pair<S
     String response = "";
 
     if (responseCode > 0) {
-        Serial.print("Response code: ");
-        Serial.println(responseCode);
         response = http.getString();
     }
     else {
