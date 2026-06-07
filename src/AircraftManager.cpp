@@ -17,7 +17,7 @@ void AircraftManager::Update()
     unsigned long now = millis();
 
     // fetch cycle
-    if (now - lastFetch >= FETCH_INTERVAL) {
+    if (now - lastFetch >= fetchInterval) {
         lastFetch = now;
 
         // auth
@@ -27,10 +27,7 @@ void AircraftManager::Update()
         );
 
         std::vector<std::pair<String, String>> headers = {};
-        if (!token.isEmpty()) {
-            Serial.println("Token available - adding auth header");
-            headers.push_back({ "Authorization", "Bearer " + token });
-        }
+        if (!token.isEmpty()) headers.push_back({ "Authorization", "Bearer " + token });
 
         // request
         String airplaneStateResponse = http.Get(
@@ -94,8 +91,8 @@ void AircraftManager::Draw(LGFX_Sprite& backbuffer)
         float px = -dy;
         float py = dx;
 
-        float length = 6.0f;
-        float width = 3.0f;
+        const float length = 6.0f;
+        const float width = 3.0f;
 
         float tipX = x + dx * length;
         float tipY = y + dy * length;
