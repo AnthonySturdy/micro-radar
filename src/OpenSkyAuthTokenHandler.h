@@ -5,7 +5,7 @@
 class OpenSkyAuthTokenHandler
 {
 private:
-    HttpRequestManager* const http;
+    HttpRequestManager& http;
 
     String bearerToken = "";
     unsigned long tokenExpiry = 0;  // millis() timestamp
@@ -13,7 +13,7 @@ private:
     String FetchBearerToken(const String& url, const String& clientId, const String& clientSecret);
 
 public:
-    OpenSkyAuthTokenHandler(HttpRequestManager* httpRequestManager) : http(httpRequestManager) {}
+    OpenSkyAuthTokenHandler(HttpRequestManager& httpRequestManager) : http(httpRequestManager) {}
     ~OpenSkyAuthTokenHandler() = default;
 
     String GetValidToken(const String& clientId, const String& clientSecret);

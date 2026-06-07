@@ -7,7 +7,7 @@ String OpenSkyAuthTokenHandler::FetchBearerToken(const String& url, const String
     body += "&client_id=" + clientId;
     body += "&client_secret=" + clientSecret;
 
-    String resp = http->Post(
+    String resp = http.Post(
         url,
         body,
         {
