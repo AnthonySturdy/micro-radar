@@ -11,16 +11,16 @@ void ConfigurationWebServer::Initialise() {
             Serial.println("[GET] Handling request to config web server...");
 
             prefs.begin("config", true);  // true = read only
-            String latitude = prefs.getString("latitude", "");
-            String longitude = prefs.getString("longitude", "");
-            String radius = prefs.getString("radius", "1.0");
-            String openskyClientId = prefs.getString("opensky-id", "");
+            const String latitude = prefs.getString("latitude", "");
+            const String longitude = prefs.getString("longitude", "");
+            const String radius = prefs.getString("radius", "1.0");
+            const String openskyClientId = prefs.getString("opensky-id", "");
             String openskyClientSecret = prefs.getString("opensky-secret", "");
             prefs.end();
 
             std::fill(openskyClientSecret.begin(), openskyClientSecret.end(), '*'); // replace secret string with asterisks
 
-            String html = R"(
+            const String html = R"(
                 <html>
                     <head>
                         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -144,7 +144,7 @@ void ConfigurationWebServer::Initialise() {
 String ConfigurationWebServer::GetStoredString(const char* key)
 {
     prefs.begin("config", true);
-    String value = prefs.getString(key, "");
+    const String value = prefs.getString(key, "");
     prefs.end();
     return value;
 }

@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-String HttpRequestManager::BuildQueryString(std::vector<std::pair<String, String>>& params)
+String HttpRequestManager::BuildQueryString(const std::vector<std::pair<String, String>>& params) const
 {
     if (params.empty())
         return "";
@@ -23,13 +23,14 @@ String HttpRequestManager::BuildQueryString(std::vector<std::pair<String, String
     return queryStream.str().c_str();
 }
 
-String HttpRequestManager::Get(String url, std::vector<std::pair<String, String>> params, std::vector<std::pair<String, String>> headers) {
-    String queryParams = BuildQueryString(params); // create query params string
+String HttpRequestManager::Get(const String& url, const std::vector<std::pair<String, String>>& params, const std::vector<std::pair<String, String>>& headers) {
+    const String queryParams = BuildQueryString(params); // create query params string
+    const String fullUrl = url + queryParams;
 
-    http.begin(url + queryParams);
+    http.begin(fullUrl);
 
     // add headers to request
-    for (auto& header : headers) {
+    for (const auto& header : headers) {
         http.addHeader(header.first, header.second);
     }
 
@@ -49,12 +50,12 @@ String HttpRequestManager::Get(String url, std::vector<std::pair<String, String>
     return response;
 }
 
-String HttpRequestManager::Post(String url, String body, std::vector<std::pair<String, String>> headers)
+String HttpRequestManager::Post(const String& url, const String& body, const std::vector<std::pair<String, String>>& headers)
 {
     http.begin(url);
 
     // add headers to request
-    for (auto& header : headers) {
+    for (const auto& header : headers) {
         http.addHeader(header.first, header.second);
     }
 

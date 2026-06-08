@@ -1,7 +1,7 @@
 #include "AircraftManager.h"
 
-#define SCREEN_SIZE 240
-#define SCREEN_SIZE_DIV_2 (SCREEN_SIZE / 2)
+constexpr int SCREEN_SIZE = 240;
+constexpr int SCREEN_SIZE_DIV_2 = (SCREEN_SIZE / 2);
 
 #include <ArduinoJson.h>
 
@@ -16,7 +16,7 @@ void AircraftManager::Initialise()
     const unsigned int msPerDay = 24 * 60 * 60 * 1000;
     int dailyRequestBudget = 400 - 5; // non-authed tokens minus buffer
 
-    String token = authHandler.GetValidToken(configServer.GetStoredString("opensky-id"), configServer.GetStoredString("opensky-secret"));
+    const String token = authHandler.GetValidToken(configServer.GetStoredString("opensky-id"), configServer.GetStoredString("opensky-secret"));
     if (!token.isEmpty())
         dailyRequestBudget = 4000 - 5; // authed tokens minus buffer
 
@@ -32,7 +32,7 @@ void AircraftManager::Update()
         lastFetch = now;
 
         // auth
-        String token = authHandler.GetValidToken(
+        const String token = authHandler.GetValidToken(
             configServer.GetStoredString("opensky-id"),
             configServer.GetStoredString("opensky-secret")
         );

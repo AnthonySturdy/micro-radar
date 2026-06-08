@@ -1,7 +1,7 @@
 #include <LovyanGFX.hpp>
 #include <string>
 
-#define SCREEN_SIZE 240
+constexpr int SCREEN_SIZE = 240;
 
 // Custom class describing the hardware configuration to LovyanGFX.
 // Configured via three structs: SPI bus, display panel, and backlight.
@@ -31,7 +31,7 @@ public:
 
       cfg.pin_mosi = 7;    // Data to display
       cfg.pin_sclk = 6;    // SPI clock
-      cfg.pin_dc   = 2;    // LOW = command, HIGH = pixel data
+      cfg.pin_dc = 2;    // LOW = command, HIGH = pixel data
 
       _bus.config(cfg);
       _panel.setBus(&_bus);
@@ -43,8 +43,8 @@ public:
     {
       auto cfg = _panel.config();
 
-      cfg.pin_cs   = 10;   // Chip select - pulls LOW to activate display on SPI bus
-      cfg.pin_rst  = -1;   // Hardwired on this board, no software control needed
+      cfg.pin_cs = 10;   // Chip select - pulls LOW to activate display on SPI bus
+      cfg.pin_rst = -1;   // Hardwired on this board, no software control needed
       cfg.pin_busy = -1;   // GC9A01 doesn't use a busy pin
 
       _panel.config(cfg);
@@ -85,8 +85,8 @@ void setup() {
   std::string text = "Hello, world!";
   int textWidth = tft.textWidth(text.c_str());
   tft.drawString(
-    text.c_str(), 
-    (SCREEN_SIZE / 2) - (textWidth / 2), 
+    text.c_str(),
+    (SCREEN_SIZE / 2) - (textWidth / 2),
     SCREEN_SIZE / 2
   );
 }

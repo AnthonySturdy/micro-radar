@@ -7,7 +7,7 @@ String OpenSkyAuthTokenHandler::FetchBearerToken(const String& url, const String
     body += "&client_id=" + clientId;
     body += "&client_secret=" + clientSecret;
 
-    String resp = http.Post(
+    const String resp = http.Post(
         url,
         body,
         {
@@ -15,16 +15,16 @@ String OpenSkyAuthTokenHandler::FetchBearerToken(const String& url, const String
         }
     );
 
-    JsonDocument doc;
+    StaticJsonDocument<512> doc;
     deserializeJson(doc, resp);
-    String token = doc["access_token"];
+    const String token = doc["access_token"] | String("");
 
     return token;
 }
 
 String OpenSkyAuthTokenHandler::GetValidToken(const String& clientId, const String& clientSecret)
 {
-    String url = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
+    const String url = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 
     if (clientId.isEmpty() || clientSecret.isEmpty())
         return "";

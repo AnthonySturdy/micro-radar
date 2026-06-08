@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
-#include <cmath>
-#include <map>
 
 #include "LGFX.h"
 #include "WiFiManagerHelpers.h"
@@ -14,8 +12,8 @@
 #include "models/Aircraft.h"
 #include "models/TrackedAircraft.h"
 
-#define SCREEN_SIZE 240
-#define SCREEN_SIZE_DIV_2 (SCREEN_SIZE / 2)
+constexpr int SCREEN_SIZE = 240;
+constexpr int SCREEN_SIZE_DIV_2 = (SCREEN_SIZE / 2);
 
 LGFX tft;
 LGFX_Sprite backbuffer(&tft);
@@ -67,7 +65,7 @@ void loop()
     SCREEN_SIZE_DIV_2 - 1,
     SCREEN_SIZE_DIV_2 - 1 + (std::cos(millis() / 3000.0f) * SCREEN_SIZE_DIV_2),
     SCREEN_SIZE_DIV_2 - 1 + (std::sin(millis() / 3000.0f) * SCREEN_SIZE_DIV_2),
-    15, 128, 5
+    20, 128, 5
   );
   aircraftManager.Draw(backbuffer);
   backbuffer.pushSprite(0, 0);
