@@ -8,9 +8,9 @@ constexpr int SCREEN_SIZE_DIV_2 = (SCREEN_SIZE / 2);
 void AircraftManager::Initialise()
 {
     // Get centre point + radius
-    lat = std::stod(configServer.GetStoredString("latitude").c_str());
-    lon = std::stod(configServer.GetStoredString("longitude").c_str());
-    rad = std::stod(configServer.GetStoredString("radius").c_str());
+    lat = configServer.GetStoredString("latitude").toDouble();
+    lon = configServer.GetStoredString("longitude").toDouble();
+    rad = configServer.GetStoredString("radius").toDouble();
 
     // Calculate how often we can call OpenSky API before being rate limited
     const unsigned int msPerDay = 24 * 60 * 60 * 1000;

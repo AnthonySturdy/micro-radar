@@ -1,26 +1,24 @@
 #include "HttpRequestManager.h"
 
-#include <sstream>
-
 String HttpRequestManager::BuildQueryString(const std::vector<std::pair<String, String>>& params) const
 {
     if (params.empty())
         return "";
 
-    std::stringstream queryStream;
-    queryStream << "?";
+    String queryStream = "?";
 
     bool first = true;
     for (const auto& [key, value] : params)
     {
         if (!first)
-            queryStream << "&";
+            queryStream += "&";
 
-        queryStream << key.c_str() << "=" << value.c_str();
+        queryStream += key + "=" + value;
+
         first = false;
     }
 
-    return queryStream.str().c_str();
+    return queryStream;
 }
 
 String HttpRequestManager::Get(const String& url, const std::vector<std::pair<String, String>>& params, const std::vector<std::pair<String, String>>& headers) {
