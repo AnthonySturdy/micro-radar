@@ -180,7 +180,7 @@ Here you can set:
 
 <img width="400" alt="image" src="https://github.com/user-attachments/assets/45e6219c-2672-4197-baad-16ae08180b58" />
 
-If you've made an OpenSky account (which I highly recommend), you can find your credentials under your account settings at opensky-network.org. With authentication, you get 4000 requests per day instead of 400, making the live view much more accurate. Read more about the API [here](https://openskynetwork.org).
+If you've made an OpenSky account (which I highly recommend), you can find your credentials under your account settings at opensky-network.org. With authentication, you get 4000 requests per day instead of 400, making the live view much more accurate. Read more about the API [here](https://opensky-network.org).
 
 This configuration page is accessible anytime the device is connected to WiFi, so you can tweak settings whenever you want.
 
