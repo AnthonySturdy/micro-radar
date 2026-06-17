@@ -121,7 +121,10 @@ static const char CONFIG_HTML[] PROGMEM = R"(
 )";
 
 void ConfigurationWebServer::Initialise() {
-    MDNS.begin("microradar");
+    // start mDNS and check result
+    if (!MDNS.begin("microradar")) {
+        Serial.println("[WARN] Failed to start mDNS. Continuing without mDNS...");
+    }
 
     server.on("/", HTTP_GET, [&](AsyncWebServerRequest* request) {
         Serial.println("[GET] Handling request to config web server...");
@@ -165,16 +168,31 @@ void ConfigurationWebServer::Initialise() {
     server.on("/save", HTTP_POST, [&](AsyncWebServerRequest* request) {
         Serial.println("[POST] Handling form submission to config web server...");
 
+        // safe parameter retrieval helper lambda
+        auto TrySaveParam = [request, this](const char* paramName) {
+            const auto* param = request->getParam(paramName, true);
+            if (param == nullptr)
+                return false;
+
+            prefs.putString(paramName, param->value());
+            return true;
+            };
+
         prefs.begin("config", false);
-        if (request->hasParam("latitude", true)) prefs.putString("latitude", request->getParam("latitude", true)->value());
-        if (request->hasParam("longitude", true)) prefs.putString("longitude", request->getParam("longitude", true)->value());
-        if (request->hasParam("radius", true)) prefs.putString("radius", request->getParam("radius", true)->value());
-        if (request->hasParam("opensky-id", true)) prefs.putString("opensky-id", request->getParam("opensky-id", true)->value());
-        if (request->hasParam("opensky-secret", true)) {
-            const String secret = request->getParam("opensky-secret", true)->value();
-            if (secret.indexOf('*') == -1)            // don't overwrite with masked value
+
+        TrySaveParam("latitude");
+        TrySaveParam("longitude");
+        TrySaveParam("radius");
+        TrySaveParam("opensky-id");
+
+        const auto* param = request->getParam("opensky-secret", true);
+        if (param != nullptr) {
+            const String& secret = param->value();
+            if (secret.indexOf('*') == -1) { // Special handling for secret: don't overwrite with masked value
                 prefs.putString("opensky-secret", secret);
+            }
         }
+
         prefs.putString("scanline", request->hasParam("scanline", true) ? "true" : "false");
         prefs.putString("triangle", request->hasParam("triangle", true) ? "true" : "false");
         prefs.putString("infotext", request->hasParam("infotext", true) ? "true" : "false");

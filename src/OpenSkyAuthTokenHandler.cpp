@@ -7,7 +7,7 @@ String OpenSkyAuthTokenHandler::FetchBearerToken(const String& url, const String
     body += "&client_id=" + clientId;
     body += "&client_secret=" + clientSecret;
 
-    const String resp = http.Post(
+    const HttpResult resp = http.Post(
         url,
         body,
         {
@@ -15,11 +15,28 @@ String OpenSkyAuthTokenHandler::FetchBearerToken(const String& url, const String
         }
     );
 
-    StaticJsonDocument<512> doc;
-    deserializeJson(doc, resp);
-    const String token = doc["access_token"] | String("");
+    if (!resp.success) {
+        Serial.print("[ERROR] OpenSky token request failed: ");
+        Serial.println(resp.errorMessage);
+        return "";
+    }
 
-    return token;
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, resp.response);
+
+    if (error) {
+        Serial.print("[ERROR] OpenSky token response JSON parse failed: ");
+        Serial.println(error.f_str());
+        return "";
+    }
+
+    const JsonVariant token = doc["access_token"];
+    if (!token.is<String>()) {
+        Serial.println("[WARN] Missing or non-string 'access_token' in OpenSky API response");
+        return "";
+    }
+
+    return token.as<String>();
 }
 
 String OpenSkyAuthTokenHandler::GetValidToken(const String& clientId, const String& clientSecret)

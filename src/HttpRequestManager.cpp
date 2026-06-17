@@ -21,8 +21,10 @@ String HttpRequestManager::BuildQueryString(const std::vector<std::pair<String, 
     return queryStream;
 }
 
-String HttpRequestManager::Get(const String& url, const std::vector<std::pair<String, String>>& params, const std::vector<std::pair<String, String>>& headers) {
-    const String queryParams = BuildQueryString(params); // create query params string
+HttpResult HttpRequestManager::Get(const String& url, const std::vector<std::pair<String, String>>& params, const std::vector<std::pair<String, String>>& headers) {
+    HttpResult result{ false, 0, "", "" };
+
+    const String queryParams = BuildQueryString(params);
     const String fullUrl = url + queryParams;
 
     http.begin(fullUrl);
@@ -32,24 +34,31 @@ String HttpRequestManager::Get(const String& url, const std::vector<std::pair<St
         http.addHeader(header.first, header.second);
     }
 
-    // send request and handle response 
+    // send request and handle response
     int responseCode = http.GET();
-    String response = "";
+    result.statusCode = responseCode;
 
     if (responseCode > 0) {
-        response = http.getString();
+        result.success = true;
+        result.response = http.getString();
     }
     else {
-        Serial.print("Error: ");
-        Serial.println(http.errorToString(responseCode));
+        result.success = false;
+        result.errorMessage = http.errorToString(responseCode);
+        Serial.print("[GET] HTTP Error (");
+        Serial.print(responseCode);
+        Serial.print("): ");
+        Serial.println(result.errorMessage);
     }
 
     http.end();
-    return response;
+    return result;
 }
 
-String HttpRequestManager::Post(const String& url, const String& body, const std::vector<std::pair<String, String>>& headers)
+HttpResult HttpRequestManager::Post(const String& url, const String& body, const std::vector<std::pair<String, String>>& headers)
 {
+    HttpResult result{ false, 0, "", "" };
+
     http.begin(url);
 
     // add headers to request
@@ -57,18 +66,23 @@ String HttpRequestManager::Post(const String& url, const String& body, const std
         http.addHeader(header.first, header.second);
     }
 
-    // send request and handle response 
+    // send request and handle response
     int responseCode = http.POST(body);
-    String response = "";
+    result.statusCode = responseCode;
 
     if (responseCode > 0) {
-        response = http.getString();
+        result.success = true;
+        result.response = http.getString();
     }
     else {
-        Serial.print("Error: ");
-        Serial.println(http.errorToString(responseCode));
+        result.success = false;
+        result.errorMessage = http.errorToString(responseCode);
+        Serial.print("[POST] HTTP Error (");
+        Serial.print(responseCode);
+        Serial.print("): ");
+        Serial.println(result.errorMessage);
     }
 
     http.end();
-    return response;
+    return result;
 }

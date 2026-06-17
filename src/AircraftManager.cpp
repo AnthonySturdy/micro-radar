@@ -47,7 +47,7 @@ void AircraftManager::Update()
         if (!token.isEmpty()) headers.push_back({ "Authorization", "Bearer " + token });
 
         // request
-        String airplaneStateResponse = http.Get(
+        HttpResult result = http.Get(
             "https://opensky-network.org/api/states/all",
             {
               {"lamin", String(lat - rad)},
@@ -58,9 +58,16 @@ void AircraftManager::Update()
             headers
         );
 
+        // If request failed, skip this update
+        if (!result.success) {
+            Serial.print("[WARN] OpenSky API request failed: ");
+            Serial.println(result.errorMessage);
+            return;
+        }
+
         // track
         JsonDocument doc;
-        deserializeJson(doc, airplaneStateResponse);
+        deserializeJson(doc, result.response);
         auto aircraft = JsonParser::ParseArray<Aircraft>(doc["states"]);
         now = millis(); // override with post-parse timestamp
 
