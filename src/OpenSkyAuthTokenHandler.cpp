@@ -39,7 +39,7 @@ String OpenSkyAuthTokenHandler::FetchBearerToken(const String& url, const String
     return token.as<String>();
 }
 
-String OpenSkyAuthTokenHandler::GetValidToken(const String& clientId, const String& clientSecret)
+const String OpenSkyAuthTokenHandler::GetValidToken(const String& clientId, const String& clientSecret)
 {
     const String url = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 

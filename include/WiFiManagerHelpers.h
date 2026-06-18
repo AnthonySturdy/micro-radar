@@ -11,7 +11,7 @@ namespace WiFiManagerHelpers
         wm.setTitle("Micro Radar - Setup WiFi");
         wm.setCustomHeadElement("<style>body{background:#111;color:#00ff00;font-family:monospace;} div:has(> a){background:#00ff00;} a:hover{color:#111;}</style>");
 
-        wm.setAPCallback([&](WiFiManager* wifiManager) {
+        wm.setAPCallback([&tft](WiFiManager* wifiManager) {
             tft.fillScreen(lgfx::color888(0, 0, 0));
             tft.setTextColor(lgfx::color888(0, 255, 0));
 

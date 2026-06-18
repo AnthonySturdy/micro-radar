@@ -47,9 +47,9 @@ static const char CONFIG_HTML[] PROGMEM = R"(
                     <input
                         name="radius"
                         type="number"
-                        min="0"
+                        min="0.000001"
                         step="0.000001"
-                        max="2"
+                        max="2.499999"
                         value='%RADIUS%'
                         class="flex-1 border border-green-500 bg-gray-900 w-full px-3 py-2 text-lg sm:text-base sm:px-1 sm:py-0">
                 </label>
@@ -126,6 +126,7 @@ void ConfigurationWebServer::Initialise() {
         Serial.println("[WARN] Failed to start mDNS. Continuing without mDNS...");
     }
 
+    // Handle visit to config web server
     server.on("/", HTTP_GET, [&](AsyncWebServerRequest* request) {
         Serial.println("[GET] Handling request to config web server...");
 
@@ -165,6 +166,7 @@ void ConfigurationWebServer::Initialise() {
         }
     );
 
+    // Handle save submission to web server
     server.on("/save", HTTP_POST, [&](AsyncWebServerRequest* request) {
         Serial.println("[POST] Handling form submission to config web server...");
 
@@ -206,7 +208,7 @@ void ConfigurationWebServer::Initialise() {
     server.begin();
 }
 
-String ConfigurationWebServer::GetStoredString(const char* key)
+const String ConfigurationWebServer::GetStoredString(const char* key)
 {
     prefs.begin("config", true);
     const String value = prefs.getString(key, "");

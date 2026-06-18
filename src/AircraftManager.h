@@ -26,6 +26,11 @@ private:
     HttpRequestManager& http;
     LGFX& tft;
 
+    void DrawRadarCircles(LGFX_Sprite& backbuffer) const;
+    std::pair<int, int> ProjectCoordinateToScreen(float predLat, float predLon) const;
+    void DrawAircraftInfo(LGFX_Sprite& backbuffer, int x, int y, const TrackedAircraft& tracked) const;
+    void DrawAircraftTriangle(LGFX_Sprite& backbuffer, int x, int y, const TrackedAircraft& tracked) const;
+
 public:
     AircraftManager(ConfigurationWebServer& config, OpenSkyAuthTokenHandler& auth, HttpRequestManager& httpManager, LGFX& tftGfx)
         : configServer(config), authHandler(auth), http(httpManager), tft(tftGfx)

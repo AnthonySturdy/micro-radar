@@ -38,7 +38,7 @@ struct TrackedAircraft {
         float deltaSeconds = (now - lastTick) / 1000.0f;
         lastTick = now;
 
-        const float blendSpeed = 0.25f; // lower = slower, higher = faster
+        const float blendSpeed = 0.15f; // lower = slower, higher = faster
         blendAlpha = min(blendAlpha + deltaSeconds * blendSpeed, 1.0f);
     }
 

@@ -13,20 +13,23 @@ void AircraftManager::Initialise()
     rad = configServer.GetStoredString("radius").toDouble();
 
     // configuration
-    String renderText = configServer.GetStoredString("infotext");
-    String renderTris = configServer.GetStoredString("triangle");
+    const String renderText = configServer.GetStoredString("infotext");
+    const String renderTris = configServer.GetStoredString("triangle");
     if (!renderText.isEmpty()) displayInfoText = renderText == "true" ? true : false;
     if (!renderTris.isEmpty()) displayTriangles = renderTris == "true" ? true : false;
 
     // calculate how often we can call OpenSky API before being rate limited
-    const unsigned int msPerDay = 24 * 60 * 60 * 1000;
-    int dailyRequestBudget = 400 - 5; // non-authed tokens minus buffer
+    constexpr int MS_PER_DAY = 24 * 60 * 60 * 1000;
+    constexpr int ANONYMOUS_TOKENS_PER_DAY = 400;
+    constexpr int AUTHED_TOKENS_PER_DAY = 4000;
+    constexpr int TOKEN_BUFFER = 3;
+    int dailyRequestBudget = ANONYMOUS_TOKENS_PER_DAY - TOKEN_BUFFER; // non-authed tokens minus buffer
 
     const String token = authHandler.GetValidToken(configServer.GetStoredString("opensky-id"), configServer.GetStoredString("opensky-secret"));
     if (!token.isEmpty())
-        dailyRequestBudget = 4000 - 5; // authed tokens minus buffer
+        dailyRequestBudget = AUTHED_TOKENS_PER_DAY - TOKEN_BUFFER; // authed tokens minus buffer
 
-    fetchInterval = msPerDay / dailyRequestBudget;
+    fetchInterval = MS_PER_DAY / dailyRequestBudget;
 }
 
 void AircraftManager::Update()
@@ -92,65 +95,76 @@ void AircraftManager::Update()
 
 void AircraftManager::Draw(LGFX_Sprite& backbuffer)
 {
-    const int CENTRE = SCREEN_SIZE_DIV_2 - 1;
-    const int OUTER = SCREEN_SIZE_DIV_2 - 1;
-    backbuffer.drawCircle(CENTRE, CENTRE, OUTER, lgfx::color888(0, 200, 0));  // outer ring, 1px inside edge
-    backbuffer.drawCircle(CENTRE, CENTRE, (OUTER / 3) * 2, lgfx::color888(0, 64, 0));   // mid ring
-    backbuffer.drawCircle(CENTRE, CENTRE, OUTER / 3, lgfx::color888(0, 32, 0));   // inner ring
+    DrawRadarCircles(backbuffer);
 
     for (auto& [icao, tracked] : trackedAircraft) {
         if (tracked.state.onGround) continue;
 
-        // predict for smooth motion between requests
         tracked.Tick();
         auto [predLat, predLon] = tracked.GetDisplayPosition();
+        auto [x, y] = ProjectCoordinateToScreen(predLat, predLon);
 
-        // project longitude and latitude to screen coords
-        float lonScale = cos(lat * DEG_TO_RAD);
+        if (displayInfoText)
+            DrawAircraftInfo(backbuffer, x, y, tracked);
 
-        float dLon = (predLon - lon) * lonScale;
-        float dLat = predLat - lat;
-
-        float normLon = (dLon + rad) / (2.0f * rad);
-        float normLat = (dLat + rad) / (2.0f * rad);
-
-        int x = normLon * SCREEN_SIZE;
-        int y = SCREEN_SIZE - (normLat * SCREEN_SIZE);
-
-        // calculate triangle vertices based on travel direction
-        float dx = std::sin(radians(tracked.state.trueTrack));
-        float dy = -std::cos(radians(tracked.state.trueTrack));
-
-        float px = -dy;
-        float py = dx;
-
-        const float length = 6.0f;
-        const float width = 3.0f;
-
-        float tipX = x + dx * length;
-        float tipY = y + dy * length;
-
-        float leftX = x - dx * length * 0.5f + px * width * 0.5f;
-        float leftY = y - dy * length * 0.5f + py * width * 0.5f;
-
-        float rightX = x - dx * length * 0.5f - px * width * 0.5f;
-        float rightY = y - dy * length * 0.5f - py * width * 0.5f;
-
-        // draw text
-        if (displayInfoText) {
-            backbuffer.setTextSize(1);
-            backbuffer.setTextColor(lgfx::color888(0, 128, 0));
-            backbuffer.drawString(tracked.state.callsign, x + 5, y + 5);
-            backbuffer.drawString(String(tracked.state.velocity) + "m/s", x + 5, y + 5 + (tft.fontHeight() + 1));
-            backbuffer.drawString(String(tracked.state.baroAltitude) + "m", x + 5, y + 5 + (tft.fontHeight() * 2 + 1));
-        }
-
-        // draw representation of plane
-        if (displayTriangles) {
-            backbuffer.fillTriangle(tipX, tipY, leftX, leftY, rightX, rightY, lgfx::color888(0, 255, 0));
-        }
-        else {
+        if (displayTriangles)
+            DrawAircraftTriangle(backbuffer, x, y, tracked);
+        else
             backbuffer.fillCircle(x, y, 3, lgfx::color888(0, 255, 0));
-        }
     }
+}
+
+void AircraftManager::DrawRadarCircles(LGFX_Sprite& backbuffer) const
+{
+    constexpr int CENTRE = SCREEN_SIZE_DIV_2 - 1;
+    constexpr int OUTER = SCREEN_SIZE_DIV_2 - 1;
+
+    backbuffer.drawCircle(CENTRE, CENTRE, OUTER, lgfx::color888(0, 200, 0));
+    backbuffer.drawCircle(CENTRE, CENTRE, (OUTER / 3) * 2, lgfx::color888(0, 64, 0));
+    backbuffer.drawCircle(CENTRE, CENTRE, OUTER / 3, lgfx::color888(0, 32, 0));
+}
+
+std::pair<int, int> AircraftManager::ProjectCoordinateToScreen(float predLat, float predLon) const
+{
+    const float dLon = predLon - lon;
+    const float dLat = predLat - lat;
+
+    const float normLon = (dLon + rad) / (2.0f * rad);
+    const float normLat = (dLat + rad) / (2.0f * rad);
+
+    const int x = static_cast<int>(normLon * SCREEN_SIZE);
+    const int y = static_cast<int>(SCREEN_SIZE - (normLat * SCREEN_SIZE));
+
+    return { x, y };
+}
+
+void AircraftManager::DrawAircraftInfo(LGFX_Sprite& backbuffer, int x, int y, const TrackedAircraft& tracked) const
+{
+    const int lineHeight = tft.fontHeight() + 1;
+
+    backbuffer.setTextSize(1);
+    backbuffer.setTextColor(lgfx::color888(0, 128, 0));
+    backbuffer.drawString(tracked.state.callsign, x + 5, y + 5);
+    backbuffer.drawString(String(tracked.state.velocity) + "m/s", x + 5, y + 5 + lineHeight);
+    backbuffer.drawString(String(tracked.state.baroAltitude) + "m", x + 5, y + 5 + lineHeight * 2);
+}
+
+void AircraftManager::DrawAircraftTriangle(LGFX_Sprite& backbuffer, int x, int y, const TrackedAircraft& tracked) const
+{
+    const float dx = std::sin(radians(tracked.state.trueTrack));
+    const float dy = -std::cos(radians(tracked.state.trueTrack));
+    const float px = -dy;
+    const float py = dx;
+
+    constexpr float TRIANGLE_LENGTH = 6.0f;
+    constexpr float TRIANGLE_WIDTH = 3.0f;
+
+    const float tipX = x + dx * TRIANGLE_LENGTH;
+    const float tipY = y + dy * TRIANGLE_LENGTH;
+    const float leftX = x - dx * TRIANGLE_LENGTH * 0.5f + px * TRIANGLE_WIDTH * 0.5f;
+    const float leftY = y - dy * TRIANGLE_LENGTH * 0.5f + py * TRIANGLE_WIDTH * 0.5f;
+    const float rightX = x - dx * TRIANGLE_LENGTH * 0.5f - px * TRIANGLE_WIDTH * 0.5f;
+    const float rightY = y - dy * TRIANGLE_LENGTH * 0.5f - py * TRIANGLE_WIDTH * 0.5f;
+
+    backbuffer.fillTriangle(tipX, tipY, leftX, leftY, rightX, rightY, lgfx::color888(0, 255, 0));
 }

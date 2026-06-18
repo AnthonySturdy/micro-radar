@@ -13,5 +13,5 @@ public:
     ConfigurationWebServer(int port) : server(port), prefs() {}
 
     void Initialise();
-    String GetStoredString(const char* key);
+    [[nodiscard]] const String GetStoredString(const char* key);
 };

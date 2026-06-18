@@ -16,5 +16,5 @@ public:
     OpenSkyAuthTokenHandler(HttpRequestManager& httpRequestManager) : http(httpRequestManager) {}
     ~OpenSkyAuthTokenHandler() = default;
 
-    String GetValidToken(const String& clientId, const String& clientSecret);
+    [[nodiscard]] const String GetValidToken(const String& clientId, const String& clientSecret);
 };
