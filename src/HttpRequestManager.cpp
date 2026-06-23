@@ -38,13 +38,17 @@ HttpResult HttpRequestManager::Get(const String& url, const std::vector<std::pai
     int responseCode = http.GET();
     result.statusCode = responseCode;
 
-    if (responseCode > 0) {
+    if (responseCode == 200) {
         result.success = true;
         result.response = http.getString();
     }
     else {
         result.success = false;
-        result.errorMessage = http.errorToString(responseCode);
+        if (responseCode > 0) {
+            result.errorMessage = "HTTP Error " + String(responseCode) + ": " + http.getString();
+        } else {
+            result.errorMessage = http.errorToString(responseCode);
+        }
         Serial.print("[GET] HTTP Error (");
         Serial.print(responseCode);
         Serial.print("): ");
@@ -70,13 +74,17 @@ HttpResult HttpRequestManager::Post(const String& url, const String& body, const
     int responseCode = http.POST(body);
     result.statusCode = responseCode;
 
-    if (responseCode > 0) {
+    if (responseCode == 200) {
         result.success = true;
         result.response = http.getString();
     }
     else {
         result.success = false;
-        result.errorMessage = http.errorToString(responseCode);
+        if (responseCode > 0) {
+            result.errorMessage = "HTTP Error " + String(responseCode) + ": " + http.getString();
+        } else {
+            result.errorMessage = http.errorToString(responseCode);
+        }
         Serial.print("[POST] HTTP Error (");
         Serial.print(responseCode);
         Serial.print("): ");

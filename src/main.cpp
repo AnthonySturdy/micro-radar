@@ -32,20 +32,33 @@ void setup()
 
   // initialise LGFX + screen
   tft.init();
-  tft.invertDisplay(true);
-  pinMode(3, OUTPUT);
-  digitalWrite(3, HIGH);
+  tft.setRotation(1); // Set to landscape mode
+  tft.invertDisplay(false);
+  pinMode(21, OUTPUT);
+  digitalWrite(21, HIGH);
 
   backbuffer.setColorDepth(8);
-  backbuffer.createSprite(SCREEN_SIZE, SCREEN_SIZE);
+  backbuffer.createSprite(320, 240); // Full CYD2USB resolution (Landscape)
 
   // establish WiFi connection
   tft.fillScreen(lgfx::color888(0, 0, 0));
   tft.setTextColor(lgfx::color888(0, 255, 0));
-  tft.drawCentreString("Connecting to WiFi...", SCREEN_SIZE / 2, SCREEN_SIZE / 2);
+  tft.drawCentreString("Connecting to WiFi...", 160, 105);
+  tft.drawCentreString("Visit http://microradar.local to configure", 160, 135);
 
-  WiFiManagerHelpers::ConfigureWiFiManager(wm, tft);
+  bool portalRan = false;
+  WiFiManagerHelpers::ConfigureWiFiManager(wm, tft, &portalRan);
   wm.autoConnect(WiFiManagerHelpers::WiFiManagerName);
+
+  if (portalRan) {
+    Serial.println("WiFi configured via captive portal. Restarting ESP32 for clean setup...");
+    delay(1000);
+    ESP.restart();
+  }
+
+  // Set calibrated touch data
+  uint16_t calData[8] = { 3807, 202, 3846, 3789, 392, 193, 382, 3736 };
+  tft.setTouchCalibrate(calData);
 
   // begin background server for configuration
   configServer.Initialise();
@@ -57,6 +70,19 @@ void setup()
 void loop()
 {
   aircraftManager.Update();
+
+  // Handle Touch Input
+  static bool wasTouched = false;
+  int tx = 0, ty = 0;
+  if (tft.getTouch(&tx, &ty)) {
+    if (!wasTouched) {
+      Serial.printf("Touch registered at screen coords: X=%d, Y=%d\n", tx, ty);
+      aircraftManager.HandleTouch(tx, ty);
+      wasTouched = true;
+    }
+  } else {
+    wasTouched = false;
+  }
 
   // draw cycle
   backbuffer.fillScreen(lgfx::color888(0, 0, 0));

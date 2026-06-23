@@ -70,6 +70,15 @@ static const char CONFIG_HTML[] PROGMEM = R"(
                         class="flex-1 border border-green-500 bg-gray-900 w-full px-3 py-2 text-lg sm:text-base sm:px-1 sm:py-0">
                 </label>
 
+                <label class="flex flex-col gap-2">
+                    <span>Map Paths (JSON coordinate lines):</span>
+                    <textarea
+                        name="mappaths"
+                        rows="3"
+                        placeholder="[[[lat1, lon1], [lat2, lon2]], [[lat3, lon3], [lat4, lon4]]]"
+                        class="border border-green-500 bg-gray-900 w-full px-3 py-2 text-lg sm:text-base font-mono">%MAP_PATHS%</textarea>
+                </label>
+
                 <div class="flex flex-col sm:flex-row gap-4 sm:justify-between">
                     <label class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                         <span>Radar sweep:</span>
@@ -96,6 +105,16 @@ static const char CONFIG_HTML[] PROGMEM = R"(
                             class="px-3 sm:px-1 accent-green-500">
                     </label>
                 </div>
+
+                <label class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                    <span>Altitude Unit:</span>
+                    <select
+                        name="altunit"
+                        class="border border-green-500 bg-gray-900 px-3 py-2 text-lg sm:text-base sm:px-1 sm:py-0">
+                        <option value="m" %ALTUNIT_M%>Meters (m)</option>
+                        <option value="ft" %ALTUNIT_FT%>Feet (ft)</option>
+                    </select>
+                </label>
 
                 <div class="flex flex-col sm:flex-row gap-4 sm:gap-5">
                     <input
@@ -126,6 +145,20 @@ void ConfigurationWebServer::Initialise() {
         Serial.println("[WARN] Failed to start mDNS. Continuing without mDNS...");
     }
 
+    // cache all values on boot to avoid reading from NVS in the main loop
+    prefs.begin("config", false); // Open in read/write to automatically create namespace if it doesn't exist
+    cache["latitude"] = prefs.getString("latitude", "");
+    cache["longitude"] = prefs.getString("longitude", "");
+    cache["radius"] = prefs.getString("radius", "1.0");
+    cache["opensky-id"] = prefs.getString("opensky-id", "");
+    cache["opensky-secret"] = prefs.getString("opensky-secret", "");
+    cache["scanline"] = prefs.getString("scanline", "true");
+    cache["infotext"] = prefs.getString("infotext", "true");
+    cache["triangle"] = prefs.getString("triangle", "true");
+    cache["mappaths"] = prefs.getString("mappaths", "");
+    cache["altunit"] = prefs.getString("altunit", "m");
+    prefs.end();
+
     // Handle visit to config web server
     server.on("/", HTTP_GET, [&](AsyncWebServerRequest* request) {
         Serial.println("[GET] Handling request to config web server...");
@@ -140,6 +173,8 @@ void ConfigurationWebServer::Initialise() {
         const String scanlineEnabled = prefs.getString("scanline", "true");
         const String infoTextEnabled = prefs.getString("infotext", "true");
         const String triangleEnabled = prefs.getString("triangle", "true");
+        const String mapPaths = prefs.getString("mappaths", "");
+        const String altUnit = prefs.getString("altunit", "m");
         prefs.end();
 
         // mask secret before sending to client
@@ -149,7 +184,7 @@ void ConfigurationWebServer::Initialise() {
         AsyncWebServerResponse* response = request->beginResponse(
             200, "text/html",
             (const uint8_t*)CONFIG_HTML, sizeof(CONFIG_HTML) - 1,
-            [latitude, longitude, radius, openskyClientId, openskySecret, scanlineEnabled, infoTextEnabled, triangleEnabled]
+            [latitude, longitude, radius, openskyClientId, openskySecret, scanlineEnabled, infoTextEnabled, triangleEnabled, mapPaths, altUnit]
             (const String& var) -> String {
                 if (var == "LATITUDE")       return latitude;
                 if (var == "LONGITUDE")      return longitude;
@@ -159,6 +194,9 @@ void ConfigurationWebServer::Initialise() {
                 if (var == "SCANLINE")       return scanlineEnabled == "true" ? "checked" : "";
                 if (var == "INFOTEXT")       return infoTextEnabled == "true" ? "checked" : "";
                 if (var == "TRIANGLE")       return triangleEnabled == "true" ? "checked" : "";
+                if (var == "MAP_PATHS")      return mapPaths;
+                if (var == "ALTUNIT_M")      return altUnit == "m" ? "selected" : "";
+                if (var == "ALTUNIT_FT")     return altUnit == "ft" ? "selected" : "";
                 return "";
             }
         );
@@ -186,6 +224,8 @@ void ConfigurationWebServer::Initialise() {
         TrySaveParam("longitude");
         TrySaveParam("radius");
         TrySaveParam("opensky-id");
+        TrySaveParam("mappaths");
+        TrySaveParam("altunit");
 
         const auto* param = request->getParam("opensky-secret", true);
         if (param != nullptr) {
@@ -210,8 +250,9 @@ void ConfigurationWebServer::Initialise() {
 
 const String ConfigurationWebServer::GetStoredString(const char* key)
 {
-    prefs.begin("config", true);
-    const String value = prefs.getString(key, "");
-    prefs.end();
-    return value;
+    auto it = cache.find(key);
+    if (it != cache.end()) {
+        return it->second;
+    }
+    return "";
 }
