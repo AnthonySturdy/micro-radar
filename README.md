@@ -3,7 +3,7 @@
 A tiny, premium, open-source flight radar for your desk. This version has been customized and upgraded from the [original round ESP32 micro-radar](https://github.com/AnthonySturdy/micro-radar) to run on the **ESP32 Cheap Yellow Display (CYD)**—a 3.2" 320x240 landscape color screen with interactive capacitive touch controls.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/2ccb2063-d15c-4180-8e3c-ae3a81c814ff" alt="Micro Radar" width="400"/>
+  <img src="image.png" alt="Micro Radar" width="400"/>
 </p>
 
 ---
