@@ -1,3 +1,5 @@
+[![PlatformIO](https://github.com/AnthonySturdy/micro-radar/workflows/PlatformIO/badge.svg)](https://github.com/AnthonySturdy/micro-radar/actions/)
+
 <h1 align=center>
   📡 Micro Radar
 </h1>
