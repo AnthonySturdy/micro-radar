@@ -1,1 +1,2 @@
 https://cad.onshape.com/documents/5fe6331db863c786c05e7bea/w/35885a962c877ffb6e0905d9/e/482fbce2122c007cf5094e5f
+Remix https://cad.onshape.com/documents/ea9d636c951397d54445bb73/w/9b898174211890be9e9a7ec9/e/de44951a7ffbb0a7b9959555?renderMode=0&uiState=6a8c5e986e50d7d080d18c9b (The Bezel part diameter was resized to 32 mm instead of 32.912 mm, allowing the lens to be held in a sandwich configuration. This avoids having to glue it in place. There is still a small amount of play, allowing the lens to move slightly, but this is not an issue during use.)
