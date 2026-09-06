@@ -13,6 +13,7 @@ private:
     double lat = 0.0;
     double lon = 0.0;
     double rad = 0.2;
+    double longitudeScale = 1.0;
     std::map<String, TrackedAircraft> trackedAircraft;
 
     bool displayInfoText = true;

@@ -11,6 +11,7 @@ void AircraftManager::Initialise()
     lat = configServer.GetStoredString("latitude").toDouble();
     lon = configServer.GetStoredString("longitude").toDouble();
     rad = configServer.GetStoredString("radius").toDouble();
+    longitudeScale = std::cos(radians(lat));
 
     // configuration
     const String renderText = configServer.GetStoredString("infotext");
@@ -49,14 +50,16 @@ void AircraftManager::Update()
         std::vector<std::pair<String, String>> headers = {};
         if (!token.isEmpty()) headers.push_back({ "Authorization", "Bearer " + token });
 
+        const double lonRad = rad / longitudeScale;
+
         // request
         HttpResult result = http.Get(
             "https://opensky-network.org/api/states/all",
             {
               {"lamin", String(lat - rad)},
               {"lamax", String(lat + rad)},
-              {"lomin", String(lon - rad)},
-              {"lomax", String(lon + rad)}
+              {"lomin", String(lon - lonRad)},
+              {"lomax", String(lon + lonRad)}
             },
             headers
         );
@@ -126,7 +129,7 @@ void AircraftManager::DrawRadarCircles(LGFX_Sprite& backbuffer) const
 
 std::pair<int, int> AircraftManager::ProjectCoordinateToScreen(float predLat, float predLon) const
 {
-    const float dLon = predLon - lon;
+    const float dLon = (predLon - lon) * longitudeScale;
     const float dLat = predLat - lat;
 
     const float normLon = (dLon + rad) / (2.0f * rad);
