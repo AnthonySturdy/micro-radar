@@ -11,6 +11,10 @@
   <a href="#prerequisites">PREREQUISITES</a> - <a href="#assembly">ASSEMBLY</a> - <a href="#usage">USAGE</a> - <a href="#faq">FAQ</a>
 </p>
 
+## Description
+
+This project is a small desktop radar display, showing nearby flights from [OpenSky](https://opensky-network.org).
+
 ## Prerequisites
 
 At the core of this project is the ESP32-C3 module with an integrated 240x240 IPS screen. No soldering required. The module does all the heavy lifting.
