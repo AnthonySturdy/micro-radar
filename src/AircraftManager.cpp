@@ -1,12 +1,21 @@
 #include "AircraftManager.h"
 
-constexpr int SCREEN_SIZE = 240;
-constexpr int SCREEN_SIZE_DIV_2 = (SCREEN_SIZE / 2);
-
 #include <ArduinoJson.h>
 
 void AircraftManager::Initialise()
 {
+    const String offsetXValue = configServer.GetStoredString("display-x");
+    const String offsetYValue = configServer.GetStoredString("display-y");
+    int offsetX = 0;
+    int offsetY = 0;
+    if ((!offsetXValue.isEmpty() && !RadarLayout::ParseOffset(offsetXValue.c_str(), offsetX)) ||
+        (!offsetYValue.isEmpty() && !RadarLayout::ParseOffset(offsetYValue.c_str(), offsetY)) ||
+        !RadarLayout::ValidOffsets(offsetX, offsetY)) {
+        Serial.println("[WARN] Invalid display offsets; using the default display center.");
+    } else {
+        displayLayout = RadarLayout::FromOffsets(offsetX, offsetY);
+    }
+
     // get centre point + radius
     lat = configServer.GetStoredString("latitude").toDouble();
     lon = configServer.GetStoredString("longitude").toDouble();
@@ -116,12 +125,9 @@ void AircraftManager::Draw(LGFX_Sprite& backbuffer)
 
 void AircraftManager::DrawRadarCircles(LGFX_Sprite& backbuffer) const
 {
-    constexpr int CENTRE = SCREEN_SIZE_DIV_2 - 1;
-    constexpr int OUTER = SCREEN_SIZE_DIV_2 - 1;
-
-    backbuffer.drawCircle(CENTRE, CENTRE, OUTER, lgfx::color888(0, 200, 0));
-    backbuffer.drawCircle(CENTRE, CENTRE, (OUTER / 3) * 2, lgfx::color888(0, 64, 0));
-    backbuffer.drawCircle(CENTRE, CENTRE, OUTER / 3, lgfx::color888(0, 32, 0));
+    backbuffer.drawCircle(displayLayout.x, displayLayout.y, displayLayout.radius, lgfx::color888(0, 200, 0));
+    backbuffer.drawCircle(displayLayout.x, displayLayout.y, (displayLayout.radius / 3) * 2, lgfx::color888(0, 64, 0));
+    backbuffer.drawCircle(displayLayout.x, displayLayout.y, displayLayout.radius / 3, lgfx::color888(0, 32, 0));
 }
 
 std::pair<int, int> AircraftManager::ProjectCoordinateToScreen(float predLat, float predLon) const
@@ -129,11 +135,8 @@ std::pair<int, int> AircraftManager::ProjectCoordinateToScreen(float predLat, fl
     const float dLon = predLon - lon;
     const float dLat = predLat - lat;
 
-    const float normLon = (dLon + rad) / (2.0f * rad);
-    const float normLat = (dLat + rad) / (2.0f * rad);
-
-    const int x = static_cast<int>(normLon * SCREEN_SIZE);
-    const int y = static_cast<int>(SCREEN_SIZE - (normLat * SCREEN_SIZE));
+    const int x = static_cast<int>(displayLayout.x + dLon / rad * displayLayout.radius);
+    const int y = static_cast<int>(displayLayout.y - dLat / rad * displayLayout.radius);
 
     return { x, y };
 }

@@ -6,6 +6,7 @@
 #include "ConfigurationWebServer.h"
 #include "OpenSkyAuthTokenHandler.h"
 #include "LGFX.h"
+#include "RadarLayout.h"
 
 class AircraftManager
 {
@@ -17,6 +18,7 @@ private:
 
     bool displayInfoText = true;
     bool displayTriangles = true;
+    RadarLayout displayLayout;
 
     unsigned long fetchInterval = 0;
     unsigned long lastFetch = 999999;
@@ -41,4 +43,5 @@ public:
     void Initialise();
     void Update();
     void Draw(LGFX_Sprite& backbuffer);
+    const RadarLayout& GetDisplayLayout() const { return displayLayout; }
 };

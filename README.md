@@ -176,6 +176,7 @@ Here you can set:
 - **Location** (latitude and longitude): the centre point of your radar
 - **Radar radius**: how wide the scan extends (in degrees, 2 degrees is the limit to avoid rate limiting)
 - **Display options**: toggle visual elements
+- **Display X/Y offsets**: shift the radar center in whole pixels (positive X moves right, positive Y moves down). Rings, sweep, aircraft, and labels move together. The pixel radius shrinks automatically to keep the outer ring inside the round screen; the geographic radar radius stays unchanged. Offsets default to zero, and their combined distance must not exceed 118 pixels.
 - **OpenSky credentials**: your client ID and secret (if you've made an account - again, highly recommend!)
 
 <img width="400" alt="image" src="https://github.com/user-attachments/assets/45e6219c-2672-4197-baad-16ae08180b58" />

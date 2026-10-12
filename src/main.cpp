@@ -17,7 +17,6 @@ const char* preconfiguredWifiSsid = "";
 const char* preconfiguredWifiPassword = "";
 
 constexpr int SCREEN_SIZE = 240;
-constexpr int SCREEN_SIZE_DIV_2 = (SCREEN_SIZE / 2);
 
 LGFX tft;
 LGFX_Sprite backbuffer(&tft);
@@ -73,11 +72,12 @@ void loop()
 
   String renderScanlines = configServer.GetStoredString("scanline");
   if (renderScanlines.isEmpty() || renderScanlines == "true") {
+    const auto& layout = aircraftManager.GetDisplayLayout();
     DrawScanLines(backbuffer,
-      SCREEN_SIZE_DIV_2 - 1,
-      SCREEN_SIZE_DIV_2 - 1,
-      SCREEN_SIZE_DIV_2 - 1 + (std::cos(millis() / 3000.0f) * SCREEN_SIZE_DIV_2),
-      SCREEN_SIZE_DIV_2 - 1 + (std::sin(millis() / 3000.0f) * SCREEN_SIZE_DIV_2),
+      layout.x,
+      layout.y,
+      layout.x + (std::cos(millis() / 3000.0f) * layout.radius),
+      layout.y + (std::sin(millis() / 3000.0f) * layout.radius),
       20, 128, 5
     );
   }
@@ -85,4 +85,3 @@ void loop()
   aircraftManager.Draw(backbuffer);
   backbuffer.pushSprite(0, 0);
 }
-

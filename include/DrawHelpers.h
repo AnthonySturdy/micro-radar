@@ -7,6 +7,7 @@ void DrawScanLines(LGFX_Sprite& buf, const int x0, const int y0, const int x1, c
     float dx = x1 - x0;
     float dy = y1 - y0;
     float len = sqrt(dx * dx + dy * dy);
+    if (len == 0) return;
 
     // perpendicular unit vector
     float px = -dy / len;
@@ -17,16 +18,22 @@ void DrawScanLines(LGFX_Sprite& buf, const int x0, const int y0, const int x1, c
         float t = i / (float)(thickness);
         uint8_t brightness = (uint8_t)(t * trailBrightness);
 
+        const float endX = dx + px * (i * spacing);
+        const float endY = dy + py * (i * spacing);
+        const float scale = len / sqrt(endX * endX + endY * endY);
         buf.drawLine(
             x0, y0,
-            x1 + (px * (i * spacing)), y1 + (py * (i * spacing)),
+            x0 + endX * scale, y0 + endY * scale,
             lgfx::color888(0, brightness, 0)
         );
     }
 
+    const float endX = dx + px * (thickness * spacing);
+    const float endY = dy + py * (thickness * spacing);
+    const float scale = len / sqrt(endX * endX + endY * endY);
     buf.drawLine(
         x0, y0,
-        x1 + (px * (thickness * spacing)), y1 + (py * (thickness * spacing)),
+        x0 + endX * scale, y0 + endY * scale,
         lgfx::color888(0, 200, 0)
     );
 }
