@@ -1,5 +1,8 @@
 #include "ConfigurationWebServer.h"
 #include <ESPmDNS.h>
+#include <Update.h>
+#include <new>
+#include "RadarLayout.h"
 
 // HTML stored in flash
 // %PLACEHOLDER% tokens are substituted at serve time by the template processor
@@ -13,6 +16,8 @@ static const char CONFIG_HTML[] PROGMEM = R"(
     <body class="font-mono bg-gray-900 text-green-500 min-h-screen p-4 sm:p-0 text-md sm:text-sm">
         <fieldset class="border border-green-500 p-5 w-full max-w-2xl mx-auto sm:m-10">
             <legend class="px-2">Configure Micro Radar</legend>
+
+            <p class="mb-4"><a href="/update" class="underline">Update firmware</a></p>
 
             <form id="cfg" action="/save" method="POST" class="flex flex-col gap-4 sm:gap-2">
 
@@ -53,6 +58,22 @@ static const char CONFIG_HTML[] PROGMEM = R"(
                         value='%RADIUS%'
                         class="flex-1 border border-green-500 bg-gray-900 w-full px-3 py-2 text-lg sm:text-base sm:px-1 sm:py-0">
                 </label>
+
+                <div class="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                    <label class="flex flex-col gap-2 flex-1">
+                        <span>Display X offset (pixels):</span>
+                        <input name="display-x" type="number" min="-118" max="118" step="1"
+                            value="%DISPLAY_X%" required
+                            class="border border-green-500 bg-gray-900 w-full px-3 py-2">
+                    </label>
+                    <label class="flex flex-col gap-2 flex-1">
+                        <span>Display Y offset (pixels):</span>
+                        <input name="display-y" type="number" min="-118" max="118" step="1"
+                            value="%DISPLAY_Y%" required
+                            class="border border-green-500 bg-gray-900 w-full px-3 py-2">
+                    </label>
+                </div>
+                <p>Positive offsets move right/down. The radar shrinks to fit the round display.</p>
 
                 <label class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                     <span>OpenSkyAPI Client ID:</span>
@@ -120,6 +141,58 @@ static const char CONFIG_HTML[] PROGMEM = R"(
 </html>
 )";
 
+static const char OTA_HTML[] PROGMEM = R"(
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Update Micro Radar</title>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.0"></script>
+    </head>
+    <body class="font-mono bg-gray-900 text-green-500 min-h-screen p-4 sm:p-0 text-md sm:text-sm">
+        <fieldset class="border border-green-500 p-5 w-full max-w-2xl mx-auto sm:m-10">
+            <legend class="px-2">Update Micro Radar</legend>
+            <p class="mb-4">Choose a firmware .bin file built for this device.</p>
+            <form id="update" class="flex flex-col gap-4">
+                <input name="firmware" type="file" accept=".bin,application/octet-stream" required
+                    class="border border-green-500 p-2">
+                <button type="submit" class="bg-green-500 text-black px-4 py-2 self-start cursor-pointer">
+                    Upload firmware
+                </button>
+                <progress id="progress" value="0" max="100" class="w-full"></progress>
+                <p id="result"></p>
+            </form>
+            <p class="mt-4"><a href="/" class="underline">Back to configuration</a></p>
+        </fieldset>
+        <script>
+            document.getElementById('update').addEventListener('submit', function(event) {
+                event.preventDefault();
+                const result = document.getElementById('result');
+                const progress = document.getElementById('progress');
+                const request = new XMLHttpRequest();
+                request.open('POST', '/update');
+                request.upload.addEventListener('progress', function(event) {
+                    if (event.lengthComputable) {
+                        progress.value = Math.round(event.loaded / event.total * 100);
+                    }
+                });
+                request.addEventListener('load', function() {
+                    result.textContent = request.responseText;
+                });
+                request.addEventListener('error', function() {
+                    result.textContent = 'Upload failed. Check the connection and try again.';
+                });
+                result.textContent = 'Uploading firmware...';
+                request.send(new FormData(this));
+            });
+        </script>
+    </body>
+</html>
+)";
+
+struct OtaUploadState {
+    bool valid = false;
+};
+
 void ConfigurationWebServer::Initialise() {
     // start mDNS and check result
     if (!MDNS.begin("microradar")) {
@@ -135,6 +208,8 @@ void ConfigurationWebServer::Initialise() {
         const String latitude = prefs.getString("latitude", "");
         const String longitude = prefs.getString("longitude", "");
         const String radius = prefs.getString("radius", "1.0");
+        const String displayX = prefs.getString("display-x", "0");
+        const String displayY = prefs.getString("display-y", "0");
         const String openskyClientId = prefs.getString("opensky-id", "");
         String openskySecret = prefs.getString("opensky-secret", "");
         const String scanlineEnabled = prefs.getString("scanline", "true");
@@ -149,11 +224,13 @@ void ConfigurationWebServer::Initialise() {
         AsyncWebServerResponse* response = request->beginResponse(
             200, "text/html",
             (const uint8_t*)CONFIG_HTML, sizeof(CONFIG_HTML) - 1,
-            [latitude, longitude, radius, openskyClientId, openskySecret, scanlineEnabled, infoTextEnabled, triangleEnabled]
+            [latitude, longitude, radius, displayX, displayY, openskyClientId, openskySecret, scanlineEnabled, infoTextEnabled, triangleEnabled]
             (const String& var) -> String {
                 if (var == "LATITUDE")       return latitude;
                 if (var == "LONGITUDE")      return longitude;
                 if (var == "RADIUS")         return radius;
+                if (var == "DISPLAY_X")      return displayX;
+                if (var == "DISPLAY_Y")      return displayY;
                 if (var == "OPENSKY_ID")     return openskyClientId;
                 if (var == "OPENSKY_SECRET") return openskySecret;
                 if (var == "SCANLINE")       return scanlineEnabled == "true" ? "checked" : "";
@@ -169,6 +246,20 @@ void ConfigurationWebServer::Initialise() {
     // Handle save submission to web server
     server.on("/save", HTTP_POST, [&](AsyncWebServerRequest* request) {
         Serial.println("[POST] Handling form submission to config web server...");
+
+        const auto* displayX = request->getParam("display-x", true);
+        const auto* displayY = request->getParam("display-y", true);
+        int offsetX = 0;
+        int offsetY = 0;
+        if ((displayX == nullptr) != (displayY == nullptr) ||
+            (displayX && !RadarLayout::ParseOffset(displayX->value().c_str(), offsetX)) ||
+            (displayY && !RadarLayout::ParseOffset(displayY->value().c_str(), offsetY)) ||
+            !RadarLayout::ValidOffsets(offsetX, offsetY)) {
+            Serial.println("[WARN] Rejected invalid display offsets.");
+            request->send(400, "text/plain",
+                "Display offsets must be whole pixels with a combined distance of at most 118 pixels.");
+            return;
+        }
 
         // safe parameter retrieval helper lambda
         auto TrySaveParam = [request, this](const char* paramName) {
@@ -186,6 +277,8 @@ void ConfigurationWebServer::Initialise() {
         TrySaveParam("longitude");
         TrySaveParam("radius");
         TrySaveParam("opensky-id");
+        if (displayX) prefs.putString("display-x", String(offsetX));
+        if (displayY) prefs.putString("display-y", String(offsetY));
 
         const auto* param = request->getParam("opensky-secret", true);
         if (param != nullptr) {
@@ -202,6 +295,73 @@ void ConfigurationWebServer::Initialise() {
 
         request->send(200, "text/html", "Saved - restarting device...");
         ESP.restart();
+        }
+    );
+
+    server.on("/update", HTTP_GET, [](AsyncWebServerRequest* request) {
+        request->send_P(200, "text/html", OTA_HTML);
+    });
+
+    server.on(
+        "/update",
+        HTTP_POST,
+        [](AsyncWebServerRequest* request) {
+            auto* state = static_cast<OtaUploadState*>(request->_tempObject);
+            const bool success = state != nullptr && state->valid && !Update.hasError();
+            delete state;
+            request->_tempObject = nullptr;
+
+            AsyncWebServerResponse* response = request->beginResponse(
+                success ? 200 : 500,
+                "text/plain",
+                success ? "Firmware uploaded. Restarting..." : "Firmware update failed."
+            );
+            response->addHeader("Connection", "close");
+            if (success) {
+                request->onDisconnect([]() {
+                    ESP.restart();
+                });
+            }
+            request->send(response);
+        },
+        [](AsyncWebServerRequest* request, const String& filename, size_t index,
+           uint8_t* data, size_t len, bool final) {
+            if (index == 0) {
+                request->_tempObject = new (std::nothrow) OtaUploadState();
+                if (request->_tempObject == nullptr) {
+                    Serial.println("[OTA] Failed to allocate upload state.");
+                    return;
+                }
+
+                auto* state = static_cast<OtaUploadState*>(request->_tempObject);
+                if (!filename.endsWith(".bin")) {
+                    Serial.println("[OTA] Rejected upload: firmware must be a .bin file.");
+                    return;
+                }
+
+                if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+                    Update.printError(Serial);
+                    return;
+                }
+                state->valid = true;
+                Serial.printf("[OTA] Receiving firmware: %s\n", filename.c_str());
+            }
+
+            auto* state = static_cast<OtaUploadState*>(request->_tempObject);
+            if (state == nullptr || !state->valid) {
+                return;
+            }
+
+            if (Update.write(data, len) != len) {
+                state->valid = false;
+                Update.printError(Serial);
+                return;
+            }
+
+            if (final && !Update.end(true)) {
+                state->valid = false;
+                Update.printError(Serial);
+            }
         }
     );
 

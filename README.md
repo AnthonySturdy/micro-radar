@@ -176,6 +176,7 @@ Here you can set:
 - **Location** (latitude and longitude): the centre point of your radar
 - **Radar radius**: how wide the scan extends (in degrees, 2 degrees is the limit to avoid rate limiting)
 - **Display options**: toggle visual elements
+- **Display X/Y offsets**: shift the radar center in whole pixels (positive X moves right, positive Y moves down). Rings, sweep, aircraft, and labels move together. The pixel radius shrinks automatically to keep the outer ring inside the round screen; the geographic radar radius stays unchanged. Offsets default to zero, and their combined distance must not exceed 118 pixels.
 - **OpenSky credentials**: your client ID and secret (if you've made an account - again, highly recommend!)
 
 <img width="400" alt="image" src="https://github.com/user-attachments/assets/45e6219c-2672-4197-baad-16ae08180b58" />
@@ -183,6 +184,10 @@ Here you can set:
 If you've made an OpenSky account (which I highly recommend), you can find your credentials under your account settings at opensky-network.org. With authentication, you get 4000 requests per day instead of 400, making the live view much more accurate. Read more about the API [here](https://opensky-network.org).
 
 This configuration page is accessible anytime the device is connected to WiFi, so you can tweak settings whenever you want.
+
+### Updating Firmware Over WiFi
+
+Flash the firmware over USB once after installing this OTA-enabled version so the device receives the dual-slot partition layout. For future updates, build the firmware in PlatformIO and open [http://microradar.local/update](http://microradar.local/update) on the same WiFi network. Select `.pio/build/esp32-c3-devkitm-1/firmware.bin` and upload it. The radar will restart automatically when the update completes. Keep the device powered on and connected to WiFi during the upload.
 
 That's it! Once you've configured everything, you should see a live view of all flights over your location. Enjoy :)
 
