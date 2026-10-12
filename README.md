@@ -184,6 +184,10 @@ If you've made an OpenSky account (which I highly recommend), you can find your 
 
 This configuration page is accessible anytime the device is connected to WiFi, so you can tweak settings whenever you want.
 
+### Updating Firmware Over WiFi
+
+Flash the firmware over USB once after installing this OTA-enabled version so the device receives the dual-slot partition layout. For future updates, build the firmware in PlatformIO and open [http://microradar.local/update](http://microradar.local/update) on the same WiFi network. Select `.pio/build/esp32-c3-devkitm-1/firmware.bin` and upload it. The radar will restart automatically when the update completes. Keep the device powered on and connected to WiFi during the upload.
+
 That's it! Once you've configured everything, you should see a live view of all flights over your location. Enjoy :)
 
 <img width="400" alt="IMG_7935" src="https://github.com/user-attachments/assets/118b9a1c-c2c0-488d-b638-d8684a30b1d7" />

@@ -1,5 +1,7 @@
 #include "ConfigurationWebServer.h"
 #include <ESPmDNS.h>
+#include <Update.h>
+#include <new>
 
 // HTML stored in flash
 // %PLACEHOLDER% tokens are substituted at serve time by the template processor
@@ -13,6 +15,8 @@ static const char CONFIG_HTML[] PROGMEM = R"(
     <body class="font-mono bg-gray-900 text-green-500 min-h-screen p-4 sm:p-0 text-md sm:text-sm">
         <fieldset class="border border-green-500 p-5 w-full max-w-2xl mx-auto sm:m-10">
             <legend class="px-2">Configure Micro Radar</legend>
+
+            <p class="mb-4"><a href="/update" class="underline">Update firmware</a></p>
 
             <form id="cfg" action="/save" method="POST" class="flex flex-col gap-4 sm:gap-2">
 
@@ -120,6 +124,58 @@ static const char CONFIG_HTML[] PROGMEM = R"(
 </html>
 )";
 
+static const char OTA_HTML[] PROGMEM = R"(
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Update Micro Radar</title>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.0"></script>
+    </head>
+    <body class="font-mono bg-gray-900 text-green-500 min-h-screen p-4 sm:p-0 text-md sm:text-sm">
+        <fieldset class="border border-green-500 p-5 w-full max-w-2xl mx-auto sm:m-10">
+            <legend class="px-2">Update Micro Radar</legend>
+            <p class="mb-4">Choose a firmware .bin file built for this device.</p>
+            <form id="update" class="flex flex-col gap-4">
+                <input name="firmware" type="file" accept=".bin,application/octet-stream" required
+                    class="border border-green-500 p-2">
+                <button type="submit" class="bg-green-500 text-black px-4 py-2 self-start cursor-pointer">
+                    Upload firmware
+                </button>
+                <progress id="progress" value="0" max="100" class="w-full"></progress>
+                <p id="result"></p>
+            </form>
+            <p class="mt-4"><a href="/" class="underline">Back to configuration</a></p>
+        </fieldset>
+        <script>
+            document.getElementById('update').addEventListener('submit', function(event) {
+                event.preventDefault();
+                const result = document.getElementById('result');
+                const progress = document.getElementById('progress');
+                const request = new XMLHttpRequest();
+                request.open('POST', '/update');
+                request.upload.addEventListener('progress', function(event) {
+                    if (event.lengthComputable) {
+                        progress.value = Math.round(event.loaded / event.total * 100);
+                    }
+                });
+                request.addEventListener('load', function() {
+                    result.textContent = request.responseText;
+                });
+                request.addEventListener('error', function() {
+                    result.textContent = 'Upload failed. Check the connection and try again.';
+                });
+                result.textContent = 'Uploading firmware...';
+                request.send(new FormData(this));
+            });
+        </script>
+    </body>
+</html>
+)";
+
+struct OtaUploadState {
+    bool valid = false;
+};
+
 void ConfigurationWebServer::Initialise() {
     // start mDNS and check result
     if (!MDNS.begin("microradar")) {
@@ -202,6 +258,73 @@ void ConfigurationWebServer::Initialise() {
 
         request->send(200, "text/html", "Saved - restarting device...");
         ESP.restart();
+        }
+    );
+
+    server.on("/update", HTTP_GET, [](AsyncWebServerRequest* request) {
+        request->send_P(200, "text/html", OTA_HTML);
+    });
+
+    server.on(
+        "/update",
+        HTTP_POST,
+        [](AsyncWebServerRequest* request) {
+            auto* state = static_cast<OtaUploadState*>(request->_tempObject);
+            const bool success = state != nullptr && state->valid && !Update.hasError();
+            delete state;
+            request->_tempObject = nullptr;
+
+            AsyncWebServerResponse* response = request->beginResponse(
+                success ? 200 : 500,
+                "text/plain",
+                success ? "Firmware uploaded. Restarting..." : "Firmware update failed."
+            );
+            response->addHeader("Connection", "close");
+            if (success) {
+                request->onDisconnect([]() {
+                    ESP.restart();
+                });
+            }
+            request->send(response);
+        },
+        [](AsyncWebServerRequest* request, const String& filename, size_t index,
+           uint8_t* data, size_t len, bool final) {
+            if (index == 0) {
+                request->_tempObject = new (std::nothrow) OtaUploadState();
+                if (request->_tempObject == nullptr) {
+                    Serial.println("[OTA] Failed to allocate upload state.");
+                    return;
+                }
+
+                auto* state = static_cast<OtaUploadState*>(request->_tempObject);
+                if (!filename.endsWith(".bin")) {
+                    Serial.println("[OTA] Rejected upload: firmware must be a .bin file.");
+                    return;
+                }
+
+                if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+                    Update.printError(Serial);
+                    return;
+                }
+                state->valid = true;
+                Serial.printf("[OTA] Receiving firmware: %s\n", filename.c_str());
+            }
+
+            auto* state = static_cast<OtaUploadState*>(request->_tempObject);
+            if (state == nullptr || !state->valid) {
+                return;
+            }
+
+            if (Update.write(data, len) != len) {
+                state->valid = false;
+                Update.printError(Serial);
+                return;
+            }
+
+            if (final && !Update.end(true)) {
+                state->valid = false;
+                Update.printError(Serial);
+            }
         }
     );
 
